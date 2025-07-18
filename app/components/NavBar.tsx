@@ -1,62 +1,56 @@
 "use client"
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { FaBars, FaTimes, FaCar, FaPhone, FaWhatsapp } from 'react-icons/fa';
 import Link from 'next/link';
+import {  usePathname } from 'next/navigation';
 import { useMemo } from 'react';
 
 const Navbar = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [activeSection, setActiveSection] = useState('home');
+  const pathname = usePathname();
 
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen);
   };
 
   const navItems = useMemo(() => [
-    { name: 'Home', href: '#home', id: 'home' },
-    { name: 'Fleet', href: '#fleet', id: 'fleet' },
-    { name: 'Services', href: '#services', id: 'services' },
-    { name: 'Destinations', href: '#destinations', id: 'destinations' },
-    { name: 'Book', href: '#book', id: 'book' },
-    { name: 'Contact', href: '#contact', id: 'contact' },
+    { name: 'Home', href: '/', id: 'home' },
+    { name: 'Fleet', href: '/cars', id: 'fleet' },
+    { name: 'Services', href: '/services', id: 'services' },
+   // { name: 'Book', href: '/booking', id: 'book' },
+   // { name: 'Contact', href: '/contact', id: 'contact' },
   ], []);
 
-  useEffect(() => {
-    const handleScroll = () => {
-      const sections = navItems.map(item => document.getElementById(item.id));
-      const scrollPosition = window.scrollY + 100;
-
-      for (let i = sections.length - 1; i >= 0; i--) {
-        const section = sections[i];
-        if (section && section.offsetTop <= scrollPosition) {
-          setActiveSection(navItems[i].id);
-          break;
-        }
-      }
-    };
-
-    window.addEventListener('scroll', handleScroll);
-    handleScroll();
-
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, [navItems]);
+  // Function to get active section based on current pathname
+  const getActiveSection = () => {
+    const currentPath = pathname;
+    const activeItem = navItems.find(item => item.href === currentPath);
+    return activeItem ? activeItem.id : 'home';
+  };
 
   const handleNavClick = (
     e: React.MouseEvent<HTMLAnchorElement, MouseEvent>,
     href: string,
     id: string
   ): void => {
-    e.preventDefault();
-    const element = document.getElementById(id);
-    if (element) {
-      const offset = 80;
-      const elementPosition = element.offsetTop - offset;
-      window.scrollTo({
-        top: elementPosition,
-        behavior: 'smooth'
-      });
-    }
+    // Close mobile menu when clicking nav item
     setIsMobileMenuOpen(false);
+    
+    // If we're on the home page and clicking a section link, smooth scroll
+    if (pathname === '/' && href === '/') {
+      e.preventDefault();
+      const element = document.getElementById(id);
+      if (element) {
+        const offset = 80;
+        const elementPosition = element.offsetTop - offset;
+        window.scrollTo({
+          top: elementPosition,
+          behavior: 'smooth'
+        });
+      }
+    }
+    // Otherwise, let Next.js handle the navigation normally
+    // No need to prevent default - Link component will handle page navigation
   };
 
   return (
@@ -95,7 +89,7 @@ const Navbar = () => {
                   href={item.href}
                   onClick={(e) => handleNavClick(e, item.href, item.id)}
                   className={`px-4 py-2 rounded-lg font-medium transition-colors duration-300 ${
-                    activeSection === item.id 
+                    getActiveSection() === item.id 
                       ? 'text-white bg-primary' 
                       : 'text-earth hover:text-primary'
                   }`}
@@ -108,14 +102,14 @@ const Navbar = () => {
             {/* Desktop CTA Buttons */}
             <div className="hidden md:flex items-center space-x-2">
               <Link 
-                href="tel:+254700123456" 
+                href="tel:+254111446888" 
                 className="bg-accent hover:bg-primary text-white px-4 py-2 rounded-lg font-medium flex items-center space-x-2"
               >
                 <FaPhone />
                 <span>Call</span>
               </Link>
               <Link 
-                href="https://wa.me/254700123456" 
+                href="https://wa.me/254111446888" 
                 className="bg-primary hover:bg-accent text-white px-4 py-2 rounded-lg font-medium flex items-center space-x-2"
               >
                 <FaWhatsapp />
@@ -156,7 +150,7 @@ const Navbar = () => {
                     href={item.href}
                     onClick={(e) => handleNavClick(e, item.href, item.id)}
                     className={`py-3 px-4 rounded-lg font-medium ${
-                      activeSection === item.id 
+                      getActiveSection() === item.id 
                         ? 'text-white bg-primary' 
                         : 'text-earth hover:text-primary'
                     }`}
