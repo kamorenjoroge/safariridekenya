@@ -4,6 +4,7 @@ import { allCars } from '@/lib/data';
 import { FaStar, FaUsers, FaGasPump, FaCog, FaMapMarkerAlt, FaWhatsapp, FaPhone } from 'react-icons/fa';
 import Image from 'next/image';
 import Link from 'next/link';
+import { Suspense } from 'react';
 
 interface PageProps {
   params: Promise<{
@@ -11,7 +12,75 @@ interface PageProps {
   }>;
 }
 
-async function Page({ params }: PageProps) {
+// Loading component for car details
+function CarDetailsLoading() {
+  return (
+    <div className="bg-white">
+      <div className="bg-primary/10 py-12">
+        <div className="container mx-auto px-4">
+          <div className="h-10 bg-earth/20 rounded animate-pulse mb-2"></div>
+          <div className="h-6 bg-earth/10 rounded animate-pulse w-1/3"></div>
+        </div>
+      </div>
+      
+      <section className="py-8 px-4">
+        <div className="container mx-auto">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {/* Image skeleton */}
+            <div className="space-y-4">
+              <div className="h-96 bg-earth/20 rounded-xl animate-pulse"></div>
+              <div className="grid grid-cols-4 gap-2">
+                {[1, 2, 3, 4].map((i) => (
+                  <div key={i} className="h-20 bg-earth/20 rounded-md animate-pulse"></div>
+                ))}
+              </div>
+            </div>
+            
+            {/* Details skeleton */}
+            <div className="space-y-6">
+              <div className="flex justify-between items-start">
+                <div className="h-6 bg-earth/20 rounded animate-pulse w-1/3"></div>
+                <div className="h-8 bg-earth/20 rounded animate-pulse w-1/4"></div>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4 py-4 border-y border-earth/10">
+                {[1, 2, 3, 4].map((i) => (
+                  <div key={i} className="flex items-center space-x-3">
+                    <div className="h-5 w-5 bg-earth/20 rounded animate-pulse"></div>
+                    <div className="space-y-2">
+                      <div className="h-3 bg-earth/20 rounded animate-pulse w-16"></div>
+                      <div className="h-4 bg-earth/20 rounded animate-pulse w-12"></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              
+              <div className="space-y-3">
+                <div className="h-6 bg-earth/20 rounded animate-pulse w-1/4"></div>
+                <div className="grid grid-cols-2 gap-2">
+                  {[1, 2, 3, 4, 5, 6].map((i) => (
+                    <div key={i} className="h-4 bg-earth/20 rounded animate-pulse"></div>
+                  ))}
+                </div>
+              </div>
+              
+              <div className="pt-4 space-y-3">
+                <div className="h-12 bg-primary/20 rounded-lg animate-pulse"></div>
+                <div className="flex space-x-2">
+                  <div className="flex-1 h-10 bg-earth/20 rounded-lg animate-pulse"></div>
+                  <div className="flex-1 h-10 bg-earth/20 rounded-lg animate-pulse"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+// Car details content component
+async function CarDetailsContent({ params }: PageProps) {
   // Await the params since it's now a Promise in Next.js 15
   const { id } = await params;
   
@@ -211,6 +280,15 @@ async function Page({ params }: PageProps) {
         </div>
       </section>
     </div>
+  );
+}
+
+// Main page component with Suspense wrapper
+async function Page({ params }: PageProps) {
+  return (
+    <Suspense fallback={<CarDetailsLoading />}>
+      <CarDetailsContent params={params} />
+    </Suspense>
   );
 }
 

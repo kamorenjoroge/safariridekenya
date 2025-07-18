@@ -1,7 +1,7 @@
 // app/cars/page.tsx
 "use client";
 import { useSearchParams } from 'next/navigation';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, Suspense } from 'react';
 import { 
   FaCar, 
   FaUsers, 
@@ -28,7 +28,46 @@ const CATEGORIES = {
   'vip-luxury': 'VIP Luxury'
 };
 
-function CarsPage() {
+// Loading component for suspense fallback
+function CarsPageLoading() {
+  return (
+    <div className="bg-white">
+      <div className="bg-primary/10 py-12">
+        <div className="container mx-auto px-4">
+          <div className="h-10 bg-earth/20 rounded animate-pulse mb-2"></div>
+          <div className="h-6 bg-earth/10 rounded animate-pulse w-1/2"></div>
+        </div>
+      </div>
+      <section className="py-8 px-4">
+        <div className="container mx-auto">
+          <div className="bg-secondary/10 rounded-lg p-6 mb-8">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              {[...Array(4)].map((_, i) => (
+                <div key={i} className="h-10 bg-earth/20 rounded animate-pulse"></div>
+              ))}
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[...Array(6)].map((_, i) => (
+              <div key={i} className="bg-white rounded-xl shadow-md overflow-hidden border border-earth/10">
+                <div className="h-48 bg-earth/20 animate-pulse"></div>
+                <div className="p-6">
+                  <div className="h-6 bg-earth/20 rounded animate-pulse mb-2"></div>
+                  <div className="h-4 bg-earth/10 rounded animate-pulse mb-4"></div>
+                  <div className="h-8 bg-earth/20 rounded animate-pulse mb-4"></div>
+                  <div className="h-10 bg-primary/20 rounded animate-pulse"></div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+// Main cars component that uses search params
+function CarsContent() {
   const searchParams = useSearchParams();
   const categoryParam = searchParams.get('category') || 'all';
   
@@ -275,6 +314,15 @@ function CarsPage() {
         </div>
       </section>
     </div>
+  );
+}
+
+// Main page component with Suspense wrapper
+function CarsPage() {
+  return (
+    <Suspense fallback={<CarsPageLoading />}>
+      <CarsContent />
+    </Suspense>
   );
 }
 
