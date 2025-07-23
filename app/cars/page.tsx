@@ -1,7 +1,7 @@
-// app/cars/page.tsx
 "use client";
+
 import { useSearchParams } from "next/navigation";
-import { useState, useMemo, Suspense } from "react";
+import { useState, useEffect, useMemo, Suspense } from "react";
 import {
   FaCar,
   FaUsers,
@@ -17,7 +17,34 @@ import {
 } from "react-icons/fa";
 import Link from "next/link";
 import Image from "next/image";
-import { allCars } from "@/lib/data";
+import axios, { AxiosError } from "axios";
+
+// Define interfaces for our data
+interface Car {
+  _id: string;
+  model: string;
+  type: string;
+  registrationNumber: string;
+  location: string;
+  pricePerDay: number;
+  status: "available" | "rented";
+  image: string;
+  year: number;
+  transmission: string;
+  fuel: string;
+  seats: number;
+  createdAt: string;
+  updatedAt: string;
+  __v: number;
+  rating?: number;
+  reviews?: number;
+  popular?: boolean;
+}
+
+interface ApiResponse {
+  success: boolean;
+  data: Car[];
+}
 
 // Define category mappings
 const CATEGORIES = {
@@ -26,7 +53,9 @@ const CATEGORIES = {
   "family-suvs": "Family SUVs",
   "safari-4x4-vehicles": "Safari 4x4 Vehicles",
   "vip-luxury": "VIP Luxury",
-};
+} as const;
+
+type CategoryKey = keyof typeof CATEGORIES;
 
 // Loading component for suspense fallback
 function CarsPageLoading() {
@@ -75,23 +104,53 @@ function CarsPageLoading() {
 // Main cars component that uses search params
 function CarsContent() {
   const searchParams = useSearchParams();
-  const categoryParam = searchParams.get("category") || "all";
+  const categoryParam = (searchParams.get("category") || "all") as CategoryKey;
 
   const [searchTerm, setSearchTerm] = useState("");
-  const [priceFilter, setPriceFilter] = useState("all");
-  const [sortBy, setSortBy] = useState("popular");
+  const [priceFilter, setPriceFilter] = useState<"all" | "budget" | "mid" | "premium">("all");
+  const [sortBy, setSortBy] = useState<"popular" | "price-low" | "price-high" | "rating">("popular");
+  const [cars, setCars] = useState<Car[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchCars = async () => {
+      try {
+        const response = await axios.get<ApiResponse>('/api/cars');
+        if (response.data.success) {
+          setCars(response.data.data.map(car => ({
+            ...car,
+            rating: car.rating || 4.5, // Default values if not provided
+            reviews: car.reviews || 12,
+            popular: car.popular || false
+          })));
+        } else {
+          throw new Error('Failed to fetch cars');
+        }
+      } catch (err) {
+        const error = err as AxiosError | Error;
+        setError(error.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCars();
+  }, []);
 
   const filteredAndSortedCars = useMemo(() => {
-    const filtered = allCars.filter((car) => {
-      // Convert car category to URL-friendly format for comparison
-      const carCategorySlug = car.category.toLowerCase().replace(/\s+/g, "-");
+    if (loading || error) return [];
+
+    const filtered = cars.filter((car) => {
+      // Convert car type to URL-friendly format for comparison
+      const carTypeSlug = car.type.toLowerCase().replace(/\s+/g, "-") as CategoryKey;
 
       // Filter by URL category parameter
       const matchesCategory =
-        categoryParam === "all" || carCategorySlug === categoryParam;
+        categoryParam === "all" || carTypeSlug === categoryParam;
 
       // Filter by search term
-      const matchesSearch = car.name
+      const matchesSearch = car.model
         .toLowerCase()
         .includes(searchTerm.toLowerCase());
 
@@ -99,9 +158,7 @@ function CarsContent() {
       const matchesPrice =
         priceFilter === "all" ||
         (priceFilter === "budget" && car.pricePerDay <= 3000) ||
-        (priceFilter === "mid" &&
-          car.pricePerDay > 3000 &&
-          car.pricePerDay <= 6000) ||
+        (priceFilter === "mid" && car.pricePerDay > 3000 && car.pricePerDay <= 6000) ||
         (priceFilter === "premium" && car.pricePerDay > 6000);
 
       return matchesCategory && matchesSearch && matchesPrice;
@@ -115,7 +172,7 @@ function CarsContent() {
         case "price-high":
           return b.pricePerDay - a.pricePerDay;
         case "rating":
-          return b.rating - a.rating;
+          return (b.rating || 0) - (a.rating || 0);
         case "popular":
         default:
           return (b.popular ? 1 : 0) - (a.popular ? 1 : 0);
@@ -123,11 +180,13 @@ function CarsContent() {
     });
 
     return filtered;
-  }, [categoryParam, searchTerm, priceFilter, sortBy]);
+  }, [categoryParam, searchTerm, priceFilter, sortBy, cars, loading, error]);
 
   // Get the display name for the current category
-  const categoryDisplayName =
-    CATEGORIES[categoryParam as keyof typeof CATEGORIES] || "All Vehicles";
+  const categoryDisplayName = CATEGORIES[categoryParam] || "All Vehicles";
+
+  if (loading) return <CarsPageLoading />;
+  if (error) return <div className="text-center py-12 text-red-500">Error: {error}</div>;
 
   return (
     <div className="bg-white">
@@ -162,7 +221,7 @@ function CarsContent() {
 
               <select
                 value={priceFilter}
-                onChange={(e) => setPriceFilter(e.target.value)}
+                onChange={(e) => setPriceFilter(e.target.value as "all" | "budget" | "mid" | "premium")}
                 className="w-full px-4 py-2 rounded-lg border border-earth/20 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
               >
                 <option value="all">All Prices</option>
@@ -173,7 +232,7 @@ function CarsContent() {
 
               <select
                 value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
+                onChange={(e) => setSortBy(e.target.value as "popular" | "price-low" | "price-high" | "rating")}
                 className="w-full px-4 py-2 rounded-lg border border-earth/20 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
               >
                 <option value="popular">Most Popular</option>
@@ -197,7 +256,7 @@ function CarsContent() {
             </p>
 
             <div className="flex flex-wrap gap-2 mt-2 md:mt-0">
-              {Object.entries(CATEGORIES).map(([slug, name]) => (
+              {(Object.entries(CATEGORIES) as [CategoryKey, string][]).map(([slug, name]) => (
                 <Link
                   key={slug}
                   href={`/cars${slug === "all" ? "" : `?category=${slug}`}`}
@@ -207,7 +266,7 @@ function CarsContent() {
                       : "bg-earth/10 text-earth hover:bg-earth/20"
                   }`}
                 >
-                  {name.split(" ")[0]} {/* Show first word of category name */}
+                  {name.split(" ")[0]}
                 </Link>
               ))}
             </div>
@@ -217,7 +276,7 @@ function CarsContent() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredAndSortedCars.map((car) => (
               <div
-                key={car.id}
+                key={car._id}
                 className="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300 border border-earth/10"
               >
                 <div className="relative">
@@ -226,7 +285,7 @@ function CarsContent() {
                       Popular
                     </span>
                   )}
-                  {!car.available && (
+                  {car.status !== "available" && (
                     <span className="absolute top-3 right-3 z-10 bg-red-500 text-white px-2 py-1 rounded-full text-xs font-bold">
                       Booked
                     </span>
@@ -239,9 +298,10 @@ function CarsContent() {
                   <div className="h-48 relative overflow-hidden">
                     <Image
                       src={car.image}
-                      alt={car.name}
+                      alt={car.model}
                       fill
                       className="object-cover hover:scale-105 transition-transform duration-300"
+                      priority={false}
                     />
                   </div>
                 </div>
@@ -249,7 +309,7 @@ function CarsContent() {
                 <div className="p-6">
                   <div className="mb-4">
                     <h3 className="text-lg font-semibold text-earth mb-1">
-                      {car.name}
+                      {car.model}
                     </h3>
                     <div className="flex items-center space-x-1 mb-2">
                       <FaStar className="h-4 w-4 text-yellow-400" />
@@ -290,19 +350,19 @@ function CarsContent() {
 
                   <div className="space-y-3">
                     <Link
-                      href={`/cars/${car.id}`}
+                      href={`/cars/${car._id}`}
                       className={`w-full block text-center px-4 py-3 rounded-lg font-medium ${
-                        car.available
+                        car.status === "available"
                           ? "bg-primary hover:bg-primary-dark text-white"
                           : "bg-earth/20 text-earth/60 cursor-not-allowed"
                       }`}
                     >
-                      {car.available
+                      {car.status === "available"
                         ? "View Details & Book"
                         : "Currently Unavailable"}
                     </Link>
 
-                    {car.available && (
+                    {car.status === "available" && (
                       <div className="flex space-x-2">
                         <a
                           href="https://wa.me/254700000000"
