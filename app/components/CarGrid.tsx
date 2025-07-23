@@ -1,11 +1,74 @@
+'use client';
+
 import { FaCheckCircle, FaCar } from 'react-icons/fa';
 import Link from 'next/link';
 import Image from 'next/image';
-import { carCategories } from '@/lib/data';
+import axios, { AxiosError } from 'axios';
+import { useEffect, useState } from 'react';
 
+interface CarCategory {
+  _id: string;
+  title: string;
+  description: string;
+  image: string;
+  priceFrom: string;
+  features: string[];
+  popular: boolean;
+  createdAt: string;
+  updatedAt: string;
+  __v: number;
+}
 
+interface ApiResponse {
+  success: boolean;
+  data: CarCategory[];
+}
 
 const CarGrid = () => {
+  const [carCategories, setCarCategories] = useState<CarCategory[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchCarCategories = async () => {
+      try {
+        const response = await axios.get<ApiResponse>('/api/carcategory');
+        if (response.data.success) {
+          setCarCategories(response.data.data);
+        } else {
+          throw new Error('Failed to fetch car categories');
+        }
+      } catch (err) {
+        const error = err as AxiosError | Error;
+        setError(error.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCarCategories();
+  }, []);
+
+  if (loading) {
+    return (
+      <section className="py-20 px-4 bg-secondary/10">
+        <div className="container mx-auto text-center">
+          <p>Loading car categories...</p>
+        </div>
+      </section>
+    );
+  }
+
+  if (error) {
+    return (
+      <section className="py-20 px-4 bg-secondary/10">
+        <div className="container mx-auto text-center">
+          <p className="text-red-500">Error: {error}</p>
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section className="py-20 px-4 bg-secondary/10">
       <div className="container mx-auto">
@@ -22,7 +85,7 @@ const CarGrid = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {carCategories.map((category) => (
             <div 
-              key={category.title} 
+              key={category._id} 
               className="bg-white rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-2 group border border-gray-100"
             >
               <div className="relative">
@@ -33,11 +96,12 @@ const CarGrid = () => {
                 )}
                 <div className="h-48 overflow-hidden">
                   <Image
-                  width={500}
-                  height={500}
+                    width={500}
+                    height={500}
                     src={category.image} 
                     alt={category.title}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    priority={false}
                   />
                 </div>
               </div>
@@ -59,8 +123,8 @@ const CarGrid = () => {
                 </div>
 
                 <div className="space-y-2 mb-6">
-                  {category.features.map((feature) => (
-                    <div key={feature} className="flex items-center space-x-2">
+                  {category.features.map((feature, index) => (
+                    <div key={index} className="flex items-center space-x-2">
                       <FaCheckCircle className="h-4 w-4 text-primary" />
                       <span className="text-sm text-earth/70">{feature}</span>
                     </div>
