@@ -381,7 +381,7 @@ async function CarDetailsContent({ params }: PageProps) {
                 {car.status === "available" ? (
                   <>
                     <Link
-                      href={`/booking?carId=${car._id}&model=${encodeURIComponent(car.model)}&price=${car.pricePerDay}&location=${encodeURIComponent(car.location)}`}
+                      href={`/book?carId=${car._id}&model=${encodeURIComponent(car.model)}&price=${car.pricePerDay}&location=${encodeURIComponent(car.location)}`}
                       className="w-full block text-center px-4 py-3 rounded-lg font-medium bg-primary hover:bg-primary-dark text-white transition-colors"
                     >
                       Book Now - KES {car.pricePerDay.toLocaleString()}/day
@@ -415,17 +415,7 @@ async function CarDetailsContent({ params }: PageProps) {
                 )}
               </div>
 
-              {/* Additional Information */}
-              <div className="bg-gray-50 rounded-lg p-4 mt-6">
-                <h4 className="font-semibold text-earth mb-2">Important Information</h4>
-                <ul className="text-sm text-earth/70 space-y-1">
-                  <li>• Valid driving license required</li>
-                  <li>• Minimum age: 25 years</li>
-                  <li>• Security deposit may be required</li>
-                  <li>• Free cancellation up to 24 hours before pickup</li>
-                  <li>• Fuel policy: Return with same fuel level</li>
-                </ul>
-              </div>
+             
             </div>
           </div>
 
