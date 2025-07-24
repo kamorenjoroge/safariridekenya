@@ -1,18 +1,16 @@
-// app/cars/[id]/page.tsx
 import { notFound } from 'next/navigation';
-import { FaStar, FaUsers, FaGasPump, FaCog, FaMapMarkerAlt, FaWhatsapp, FaPhone } from 'react-icons/fa';
+import { FaStar, FaUsers, FaGasPump, FaCog, FaMapMarkerAlt, FaWhatsapp, FaPhone, FaArrowLeft } from 'react-icons/fa';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Suspense } from 'react';
-import axios from 'axios';
+import { Metadata } from 'next';
 
-// Define the car interface based on your MongoDB data
+// Types
 interface Car {
   _id: string;
   model: string;
   type: string;
-  features: string[];
-  regestrationNumber: string;
+  features?: string[];
+  registrationNumber: string;
   location: string;
   pricePerDay: number;
   status: string;
@@ -21,7 +19,7 @@ interface Car {
   transmission: string;
   fuel: string;
   seats: number;
-  category?: string; // Optional for now, in case it's not in all records
+  category?: string;
   createdAt: string;
   updatedAt: string;
   __v: number;
@@ -30,13 +28,13 @@ interface Car {
 interface ApiResponse {
   success: boolean;
   data?: Car;
-  error?: string;
+  message?: string;
 }
 
 interface CarsListResponse {
   success: boolean;
   data?: Car[];
-  error?: string;
+  message?: string;
 }
 
 interface PageProps {
@@ -45,101 +43,37 @@ interface PageProps {
   }>;
 }
 
-// Loading component for car details
-function CarDetailsLoading() {
-  return (
-    <div className="bg-white">
-      <div className="bg-primary/10 py-12">
-        <div className="container mx-auto px-4">
-          <div className="h-10 bg-earth/20 rounded animate-pulse mb-2"></div>
-          <div className="h-6 bg-earth/10 rounded animate-pulse w-1/3"></div>
-        </div>
-      </div>
-      
-      <section className="py-8 px-4">
-        <div className="container mx-auto">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            {/* Image skeleton */}
-            <div className="space-y-4">
-              <div className="h-96 bg-earth/20 rounded-xl animate-pulse"></div>
-              <div className="grid grid-cols-4 gap-2">
-                {[1, 2, 3, 4].map((i) => (
-                  <div key={i} className="h-20 bg-earth/20 rounded-md animate-pulse"></div>
-                ))}
-              </div>
-            </div>
-            
-            {/* Details skeleton */}
-            <div className="space-y-6">
-              <div className="flex justify-between items-start">
-                <div className="h-6 bg-earth/20 rounded animate-pulse w-1/3"></div>
-                <div className="h-8 bg-earth/20 rounded animate-pulse w-1/4"></div>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4 py-4 border-y border-earth/10">
-                {[1, 2, 3, 4].map((i) => (
-                  <div key={i} className="flex items-center space-x-3">
-                    <div className="h-5 w-5 bg-earth/20 rounded animate-pulse"></div>
-                    <div className="space-y-2">
-                      <div className="h-3 bg-earth/20 rounded animate-pulse w-16"></div>
-                      <div className="h-4 bg-earth/20 rounded animate-pulse w-12"></div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              
-              <div className="space-y-3">
-                <div className="h-6 bg-earth/20 rounded animate-pulse w-1/4"></div>
-                <div className="grid grid-cols-2 gap-2">
-                  {[1, 2, 3, 4, 5, 6].map((i) => (
-                    <div key={i} className="h-4 bg-earth/20 rounded animate-pulse"></div>
-                  ))}
-                </div>
-              </div>
-              
-              <div className="pt-4 space-y-3">
-                <div className="h-12 bg-primary/20 rounded-lg animate-pulse"></div>
-                <div className="flex space-x-2">
-                  <div className="flex-1 h-10 bg-earth/20 rounded-lg animate-pulse"></div>
-                  <div className="flex-1 h-10 bg-earth/20 rounded-lg animate-pulse"></div>
-                </div>
-              </div>
-            </div>
-          </div>
-          
-          {/* Similar cars loading skeleton */}
-          <div className="mt-16">
-            <div className="h-8 bg-earth/20 rounded animate-pulse w-1/4 mb-6"></div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="bg-white rounded-xl shadow-md overflow-hidden border border-earth/10">
-                  <div className="h-48 bg-earth/20 animate-pulse"></div>
-                  <div className="p-4 space-y-3">
-                    <div className="h-5 bg-earth/20 rounded animate-pulse"></div>
-                    <div className="flex justify-between items-center">
-                      <div className="h-4 bg-earth/20 rounded animate-pulse w-1/3"></div>
-                      <div className="h-4 bg-earth/20 rounded animate-pulse w-1/4"></div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
-    </div>
-  );
-}
+// Utility functions
+const getBaseUrl = () => {
+  if (process.env.NODE_ENV === 'production') {
+    return process.env.NEXT_PUBLIC_BASE_URL || 'https://safariridekenya-rje7.vercel.app/';
+  }
+  return 'http://localhost:3000';
+};
 
-// Function to fetch car data from API
+// Server-side data fetching functions
 async function fetchCarById(id: string): Promise<Car | null> {
   try {
-    const response = await axios.get<ApiResponse>(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/cars/${id}`);
+    const baseUrl = getBaseUrl();
+    const response = await fetch(`${baseUrl}/api/cars/${id}`, {
+      cache: 'no-store', // Always fetch fresh data for car details
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      console.error(`Failed to fetch car ${id}: ${response.status} ${response.statusText}`);
+      return null;
+    }
+
+    const data: ApiResponse = await response.json();
     
-    if (response.data.success && response.data.data) {
-      return response.data.data;
+    if (data.success && data.data) {
+      return data.data;
     }
     
+    console.error('API returned unsuccessful response:', data.message);
     return null;
   } catch (error) {
     console.error('Error fetching car:', error);
@@ -147,15 +81,29 @@ async function fetchCarById(id: string): Promise<Car | null> {
   }
 }
 
-// Function to fetch all cars from API
 async function fetchAllCars(): Promise<Car[]> {
   try {
-    const response = await axios.get<CarsListResponse>(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/cars`);
+    const baseUrl = getBaseUrl();
+    const response = await fetch(`${baseUrl}/api/cars`, {
+      cache: 'force-cache', // Cache car list for better performance
+      next: { revalidate: 300 }, // Revalidate every 5 minutes
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      console.error(`Failed to fetch cars: ${response.status} ${response.statusText}`);
+      return [];
+    }
+
+    const data: CarsListResponse = await response.json();
     
-    if (response.data.success && response.data.data) {
-      return response.data.data;
+    if (data.success && data.data) {
+      return data.data;
     }
     
+    console.error('API returned unsuccessful response:', data.message);
     return [];
   } catch (error) {
     console.error('Error fetching all cars:', error);
@@ -163,25 +111,45 @@ async function fetchAllCars(): Promise<Car[]> {
   }
 }
 
+// Generate metadata for SEO
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { id } = await params;
+  const car = await fetchCarById(id);
+
+  if (!car) {
+    return {
+      title: 'Car Not Found',
+      description: 'The requested car could not be found.',
+    };
+  }
+
+  return {
+    title: `${car.model} - Car Rental | Your Car Hire Service`,
+    description: `Rent ${car.model} for KES ${car.pricePerDay.toLocaleString()}/day. ${car.seats} seats, ${car.transmission} transmission, ${car.fuel} fuel. Available in ${car.location}.`,
+    openGraph: {
+      title: `${car.model} - Car Rental`,
+      description: `Rent this ${car.model} for KES ${car.pricePerDay.toLocaleString()}/day`,
+      images: [car.image],
+    },
+  };
+}
+
 // Similar cars component
 function SimilarCars({ currentCar, allCars }: { currentCar: Car; allCars: Car[] }) {
-  // Filter similar cars based on category or type
-  const similarCars = allCars.filter(car => {
-    // Exclude the current car
-    if (car._id === currentCar._id) return false;
-    
-    // If category exists, use it for comparison
-    if (currentCar.category && car.category) {
-      return car.category === currentCar.category;
-    }
-    
-    // Fallback to type if category doesn't exist
-    return car.type === currentCar.type;
-  }).slice(0, 3); // Show only 3 similar cars
+  const similarCars = allCars
+    .filter(car => {
+      if (car._id === currentCar._id) return false;
+      
+      // Priority matching: category > type
+      if (currentCar.category && car.category) {
+        return car.category === currentCar.category;
+      }
+      
+      return car.type === currentCar.type;
+    })
+    .slice(0, 3);
 
-  if (similarCars.length === 0) {
-    return null; // Don't show the section if no similar cars found
-  }
+  if (similarCars.length === 0) return null;
 
   return (
     <div className="mt-16">
@@ -195,6 +163,7 @@ function SimilarCars({ currentCar, allCars }: { currentCar: Car; allCars: Car[] 
                 alt={similarCar.model}
                 fill
                 className="object-cover"
+                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
               />
               {similarCar.status === "available" && (
                 <span className="absolute top-3 left-3 bg-green-500 text-white px-2 py-1 rounded-full text-xs font-bold">
@@ -203,10 +172,9 @@ function SimilarCars({ currentCar, allCars }: { currentCar: Car; allCars: Car[] 
               )}
             </div>
             <div className="p-4">
-              <h3 className="font-semibold text-earth mb-1">{similarCar.model}</h3>
+              <h3 className="font-semibold text-earth mb-1 truncate">{similarCar.model}</h3>
               <p className="text-sm text-earth/60 mb-2">{similarCar.type}</p>
               
-              {/* Quick specs */}
               <div className="flex items-center gap-4 text-xs text-earth/60 mb-3">
                 <div className="flex items-center gap-1">
                   <FaUsers className="h-3 w-3" />
@@ -244,41 +212,51 @@ function SimilarCars({ currentCar, allCars }: { currentCar: Car; allCars: Car[] 
 
 // Car details content component
 async function CarDetailsContent({ params }: PageProps) {
-  // Await the params since it's now a Promise in Next.js 15
   const { id } = await params;
   
-  // Fetch the car data and all cars concurrently
+  // Fetch car data and all cars concurrently
   const [car, allCars] = await Promise.all([
     fetchCarById(id),
     fetchAllCars()
   ]);
   
-  // Return 404 if car not found
   if (!car) {
     return notFound();
   }
 
-  // Mock features since they're not in your DB schema yet
-  const mockFeatures = [
-    'Air Conditioning',
-    'GPS Navigation',
-    'Bluetooth',
-    'USB Charging',
-    'Premium Sound System',
-    'Comfortable Seats'
-  ];
+  // Enhance car data with defaults
+  const enhancedCar = {
+    ...car,
+    features: car.features || [
+      'Air Conditioning',
+      'GPS Navigation',
+      'Bluetooth',
+      'USB Charging',
+      'Premium Sound System',
+      'Comfortable Seats'
+    ]
+  };
 
-  // Mock rating data since it's not in your DB schema yet
+  // Mock data (replace with actual data from your API)
   const mockRating = 4.5;
-  const mockReviews = 25;
+  const mockReviews = Math.floor(Math.random() * 45) + 5;
 
   return (
     <div className="bg-white">
       {/* Hero Section */}
       <div className="bg-primary/10 py-12">
         <div className="container mx-auto px-4">
+          <div className="flex items-center gap-4 mb-4">
+            <Link 
+              href="/cars" 
+              className="flex items-center gap-2 text-earth/70 hover:text-earth transition-colors"
+            >
+              <FaArrowLeft className="h-4 w-4" />
+              <span>Back to Cars</span>
+            </Link>
+          </div>
           <h1 className="text-4xl font-bold text-earth mb-2">{car.model}</h1>
-          <p className="text-earth/80">{car.type}</p>
+          <p className="text-earth/80">{car.type} • {car.year}</p>
         </div>
       </div>
 
@@ -295,6 +273,7 @@ async function CarDetailsContent({ params }: PageProps) {
                   fill
                   className="object-cover"
                   priority
+                  sizes="(max-width: 1024px) 100vw, 50vw"
                 />
                 {car.status === "available" && (
                   <span className="absolute top-4 left-4 z-10 bg-green-500 text-white px-3 py-1 rounded-full text-xs font-bold">
@@ -303,14 +282,14 @@ async function CarDetailsContent({ params }: PageProps) {
                 )}
               </div>
               <div className="grid grid-cols-4 gap-2">
-                {/* Thumbnail images - using same image for now */}
-                {[1, 2, 3, 4].map((i) => (
+                {Array.from({ length: 4 }).map((_, i) => (
                   <div key={i} className="relative h-20 rounded-md overflow-hidden bg-gray-100">
                     <Image
                       src={car.image}
-                      alt={`${car.model} thumbnail ${i}`}
+                      alt={`${car.model} view ${i + 1}`}
                       fill
-                      className="object-cover opacity-70"
+                      className="object-cover opacity-70 hover:opacity-100 transition-opacity cursor-pointer"
+                      sizes="(max-width: 1024px) 25vw, 12.5vw"
                     />
                   </div>
                 ))}
@@ -379,7 +358,7 @@ async function CarDetailsContent({ params }: PageProps) {
                   </div>
                   <div>
                     <div className="text-sm text-earth/60">Registration</div>
-                    <div className="font-medium">{car.regestrationNumber}</div>
+                    <div className="font-medium">{car.registrationNumber}</div>
                   </div>
                 </div>
               </div>
@@ -388,50 +367,38 @@ async function CarDetailsContent({ params }: PageProps) {
               <div className="space-y-3">
                 <h3 className="text-lg font-semibold text-earth">Features</h3>
                 <ul className="grid grid-cols-2 gap-2">
-                  {mockFeatures.map((feature, index) => (
+                  {enhancedCar.features.map((feature, index) => (
                     <li key={index} className="flex items-center space-x-2 text-earth/80">
-                      <span className="h-1.5 w-1.5 rounded-full bg-primary"></span>
+                      <span className="h-1.5 w-1.5 rounded-full bg-primary flex-shrink-0"></span>
                       <span>{feature}</span>
                     </li>
                   ))}
                 </ul>
               </div>
 
-                {/* <div className="space-y-3">
-                <h3 className="text-lg font-semibold text-earth">Features</h3>
-                <ul className="grid grid-cols-2 gap-2">
-                  {car.features.map((features, index) => (
-                    <li key={index} className="flex items-center space-x-2 text-earth/80">
-                      <span className="h-1.5 w-1.5 rounded-full bg-primary"></span>
-                      <span>{features}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>  */}
-
               {/* Action Buttons */}
               <div className="pt-4 space-y-3">
                 {car.status === "available" ? (
                   <>
                     <Link
-                      href={`/booking/${car._id}`}
-                      className="w-full block text-center px-4 py-3 rounded-lg font-medium bg-primary hover:bg-primary-dark text-white"
+                      href={`/booking?carId=${car._id}&model=${encodeURIComponent(car.model)}&price=${car.pricePerDay}&location=${encodeURIComponent(car.location)}`}
+                      className="w-full block text-center px-4 py-3 rounded-lg font-medium bg-primary hover:bg-primary-dark text-white transition-colors"
                     >
-                      Book Now
+                      Book Now - KES {car.pricePerDay.toLocaleString()}/day
                     </Link>
                     <div className="flex space-x-2">
                       <a
-                        href="https://wa.me/254700000000"
+                        href={`https://wa.me/254700000000?text=Hi, I'm interested in booking the ${car.model} for KES ${car.pricePerDay.toLocaleString()}/day`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-lg border border-earth/20 text-earth hover:bg-earth/5"
+                        className="flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-lg border border-earth/20 text-earth hover:bg-earth/5 transition-colors"
                       >
                         <FaWhatsapp className="h-4 w-4" />
                         WhatsApp
                       </a>
                       <a
                         href="tel:+254700000000"
-                        className="flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-lg border border-earth/20 text-earth hover:bg-earth/5"
+                        className="flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-lg border border-earth/20 text-earth hover:bg-earth/5 transition-colors"
                       >
                         <FaPhone className="h-4 w-4" />
                         Call Now
@@ -447,6 +414,18 @@ async function CarDetailsContent({ params }: PageProps) {
                   </button>
                 )}
               </div>
+
+              {/* Additional Information */}
+              <div className="bg-gray-50 rounded-lg p-4 mt-6">
+                <h4 className="font-semibold text-earth mb-2">Important Information</h4>
+                <ul className="text-sm text-earth/70 space-y-1">
+                  <li>• Valid driving license required</li>
+                  <li>• Minimum age: 25 years</li>
+                  <li>• Security deposit may be required</li>
+                  <li>• Free cancellation up to 24 hours before pickup</li>
+                  <li>• Fuel policy: Return with same fuel level</li>
+                </ul>
+              </div>
             </div>
           </div>
 
@@ -458,13 +437,97 @@ async function CarDetailsContent({ params }: PageProps) {
   );
 }
 
-// Main page component with Suspense wrapper
-async function Page({ params }: PageProps) {
+// Error boundary component
+function CarNotFound() {
   return (
-    <Suspense fallback={<CarDetailsLoading />}>
-      <CarDetailsContent params={params} />
-    </Suspense>
+    <div className="bg-white min-h-screen flex items-center justify-center">
+      <div className="text-center p-8">
+        <div className="text-6xl text-earth/30 mb-4">🚗</div>
+        <h1 className="text-2xl font-bold text-earth mb-2">Car Not Found</h1>
+        <p className="text-earth/60 mb-6">
+          The car you&lsquo;re looking for doesn&lsquo;t exist or has been removed.
+        </p>
+        <Link
+          href="/cars"
+          className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors"
+        >
+          <FaArrowLeft className="h-4 w-4" />
+          Back to Cars
+        </Link>
+      </div>
+    </div>
   );
 }
 
-export default Page;
+// Loading component
+function CarDetailsLoading() {
+  return (
+    <div className="bg-white">
+      <div className="bg-primary/10 py-12">
+        <div className="container mx-auto px-4">
+          <div className="h-4 bg-earth/20 rounded animate-pulse mb-4 w-32"></div>
+          <div className="h-10 bg-earth/20 rounded animate-pulse mb-2 w-80"></div>
+          <div className="h-6 bg-earth/10 rounded animate-pulse w-48"></div>
+        </div>
+      </div>
+      
+      <section className="py-8 px-4">
+        <div className="container mx-auto">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {/* Image skeleton */}
+            <div className="space-y-4">
+              <div className="h-96 bg-earth/20 rounded-xl animate-pulse"></div>
+              <div className="grid grid-cols-4 gap-2">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <div key={i} className="h-20 bg-earth/20 rounded-md animate-pulse"></div>
+                ))}
+              </div>
+            </div>
+            
+            {/* Details skeleton */}
+            <div className="space-y-6">
+              <div className="flex justify-between items-start">
+                <div className="h-6 bg-earth/20 rounded animate-pulse w-32"></div>
+                <div className="h-8 bg-earth/20 rounded animate-pulse w-40"></div>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4 py-4 border-y border-earth/10">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <div key={i} className="flex items-center space-x-3">
+                    <div className="h-5 w-5 bg-earth/20 rounded animate-pulse"></div>
+                    <div className="space-y-2">
+                      <div className="h-3 bg-earth/20 rounded animate-pulse w-16"></div>
+                      <div className="h-4 bg-earth/20 rounded animate-pulse w-12"></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              
+              <div className="space-y-3">
+                <div className="h-6 bg-earth/20 rounded animate-pulse w-40"></div>
+                <div className="grid grid-cols-2 gap-2">
+                  {Array.from({ length: 6 }).map((_, i) => (
+                    <div key={i} className="h-4 bg-earth/20 rounded animate-pulse"></div>
+                  ))}
+                </div>
+              </div>
+              
+              <div className="pt-4 space-y-3">
+                <div className="h-12 bg-primary/20 rounded-lg animate-pulse"></div>
+                <div className="flex space-x-2">
+                  <div className="flex-1 h-10 bg-earth/20 rounded-lg animate-pulse"></div>
+                  <div className="flex-1 h-10 bg-earth/20 rounded-lg animate-pulse"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+// Main page component
+export default async function CarDetailPage({ params }: PageProps) {
+  return <CarDetailsContent params={params} />;
+}
