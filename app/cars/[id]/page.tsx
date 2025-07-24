@@ -11,6 +11,7 @@ interface Car {
   _id: string;
   model: string;
   type: string;
+  features: string[];
   regestrationNumber: string;
   location: string;
   pricePerDay: number;
@@ -264,7 +265,7 @@ async function CarDetailsContent({ params }: PageProps) {
     'Bluetooth',
     'USB Charging',
     'Premium Sound System',
-    'Leather Seats'
+    'Comfortable Seats'
   ];
 
   // Mock rating data since it's not in your DB schema yet
@@ -395,6 +396,18 @@ async function CarDetailsContent({ params }: PageProps) {
                   ))}
                 </ul>
               </div>
+
+                {/* <div className="space-y-3">
+                <h3 className="text-lg font-semibold text-earth">Features</h3>
+                <ul className="grid grid-cols-2 gap-2">
+                  {car.features.map((features, index) => (
+                    <li key={index} className="flex items-center space-x-2 text-earth/80">
+                      <span className="h-1.5 w-1.5 rounded-full bg-primary"></span>
+                      <span>{features}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>  */}
 
               {/* Action Buttons */}
               <div className="pt-4 space-y-3">
